@@ -1011,5 +1011,6 @@ For issues, questions, or contributions:
 
 [ORACLE - Block diagram](documents/ORACLE_block_diagram.html)
 [ORACLE - Evaluation rubric](documents/ORACLE_evaluation_rubric.html)
+[ORACLE - Agent architecture digram](documents/ORACLE_architecture_diagram.html)
 
 *Last updated: 2026-06-16*
