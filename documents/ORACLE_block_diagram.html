@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ORACLE — Internal Architecture Block Diagram</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, #6c3483, #1a5276, #117a65);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    margin-top: 6px;
+    color: #5d6d7e;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+  }
+
+  /* ── LEGEND ─────────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #444;
+  }
+  .legend-dot {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── DIAGRAM CANVAS ─────────────────────────────────────── */
+  .diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  /* ── GENERIC BLOCK ──────────────────────────────────────── */
+  .block {
+    border-radius: 10px;
+    padding: 14px 18px;
+    position: relative;
+  }
+  .block-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+  .block-name {
+    font-size: 1rem;
+    font-weight: 800;
+  }
+  .block-sub {
+    font-size: 0.72rem;
+    margin-top: 4px;
+    opacity: 0.8;
+    line-height: 1.4;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-top: 5px;
+    margin-right: 4px;
+  }
+
+  /* ── ARROW ROW ──────────────────────────────────────────── */
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    position: relative;
+  }
+  .arrow-line {
+    width: 2px;
+    height: 100%;
+    background: #aaa;
+    position: relative;
+  }
+  .arrow-line::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 9px solid #aaa;
+  }
+  .arrow-label {
+    position: absolute;
+    font-size: 0.62rem;
+    color: #888;
+    white-space: nowrap;
+    left: calc(50% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #f0f2f5;
+    padding: 1px 4px;
+  }
+
+  /* ── ROW LAYOUT ────────────────────────────────────────── */
+  .row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .row > * { flex: 1; }
+  .row-3 > * { flex: 1; }
+
+  /* ── SECTION WRAPPER ────────────────────────────────────── */
+  .section {
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 0;
+    border: 2px solid transparent;
+  }
+  .section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0.65;
+  }
+
+  /* ── CONNECTOR ARROWS (horizontal) ─────────────────────── */
+  .h-arrows {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 8px 0;
+  }
+  .h-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+  }
+  .h-arrow-line {
+    height: 2px;
+    width: 100%;
+    background: #aaa;
+    position: relative;
+  }
+  .h-arrow-line.right::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 9px solid #aaa;
+  }
+  .h-arrow-line.left::after {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-right: 9px solid #aaa;
+  }
+  .h-arrow-label {
+    font-size: 0.6rem;
+    color: #888;
+    white-space: nowrap;
+    margin-top: 3px;
+  }
+
+  /* ── COLOUR PALETTE ─────────────────────────────────────── */
+
+  /* Streamlit UI — blue */
+  .c-ui      { background: #eaf4fb; border-color: #2e86c1; color: #1a5276; }
+  .c-ui .block-title { color: #2e86c1; }
+
+  /* ORACLE Conductor — deep purple */
+  .c-cond    { background: #f5eef8; border-color: #7d3c98; color: #4a235a; }
+  .c-cond .block-title { color: #7d3c98; }
+
+  /* Guardrails — red/orange */
+  .c-guard   { background: #fdf2f2; border-color: #cb4335; color: #7b241c; }
+  .c-guard .block-title { color: #cb4335; }
+
+  /* Agents (Herald/Archivist) — teal */
+  .c-agent   { background: #e8f8f5; border-color: #148f77; color: #0e6655; }
+  .c-agent .block-title { color: #117a65; }
+
+  /* Tools — amber */
+  .c-tool    { background: #fef9e7; border-color: #d4ac0d; color: #7d6608; }
+  .c-tool .block-title { color: #b7950b; }
+
+  /* Data stores — slate */
+  .c-store   { background: #eaf0fb; border-color: #2471a3; color: #1a5276; }
+  .c-store .block-title { color: #2471a3; }
+
+  /* HITL — coral */
+  .c-hitl    { background: #fef5e7; border-color: #ca6f1e; color: #784212; }
+  .c-hitl .block-title { color: #ca6f1e; }
+
+  /* Session/memory — green */
+  .c-mem     { background: #eafaf1; border-color: #1e8449; color: #145a32; }
+  .c-mem .block-title { color: #1e8449; }
+
+  /* MCP — indigo */
+  .c-mcp     { background: #eef0fb; border-color: #4a4a9e; color: #2c2c7e; }
+  .c-mcp .block-title { color: #4a4a9e; }
+
+  /* Section wrappers */
+  .s-guardrail { background: #fef9f9; border: 2px dashed #e74c3c33; border-radius: 14px; padding: 14px; }
+  .s-agents    { background: #f0faf8; border: 2px dashed #14867733; border-radius: 14px; padding: 14px; }
+  .s-tools     { background: #fefdf0; border: 2px dashed #d4ac0d33; border-radius: 14px; padding: 14px; }
+  .s-stores    { background: #eef5fc; border: 2px dashed #2471a333; border-radius: 14px; padding: 14px; }
+  .s-phase2    { background: #f0f0fc; border: 2px dashed #4a4a9e44; border-radius: 14px; padding: 14px; }
+
+  /* Badge colours */
+  .b-claude  { background: #d2b4de; color: #4a235a; }
+  .b-gpt4o   { background: #a9cce3; color: #1a5276; }
+  .b-gpt4om  { background: #a3e4d7; color: #0e6655; }
+  .b-sdk     { background: #fad7a0; color: #7d6608; }
+  .b-tool    { background: #d5f5e3; color: #145a32; }
+  .b-agent   { background: #d6eaf8; color: #1a5276; }
+  .b-phase2  { background: #d7d7f5; color: #2c2c7e; }
+
+  /* ── FLOW PATH NOTE ──────────────────────────────────────── */
+  .flow-note {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #7f8c8d;
+    font-style: italic;
+    padding: 6px 0 2px;
+  }
+
+  /* ── DUAL MODE BADGE ─────────────────────────────────────── */
+  .dual-mode {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .dual-mode span {
+    font-size: 0.62rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+  .dm-agent { background: #148f7722; color: #117a65; border: 1px solid #148f77; }
+  .dm-tool  { background: #d4ac0d22; color: #b7950b; border: 1px solid #d4ac0d; }
+
+  /* ── TRIPWIRE INDICATOR ─────────────────────────────────── */
+  .tripwire {
+    font-size: 0.65rem;
+    background: #fdedec;
+    color: #cb4335;
+    border: 1px solid #cb4335;
+    border-radius: 6px;
+    padding: 3px 8px;
+    margin-top: 6px;
+    display: inline-block;
+    font-weight: 700;
+  }
+
+  /* ── THRESHOLD TABLE ────────────────────────────────────── */
+  .threshold-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .thr {
+    font-size: 0.6rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+  .thr-green  { background: #d5f5e3; color: #1e8449; }
+  .thr-yellow { background: #fef9e7; color: #b7950b; }
+  .thr-red    { background: #fdedec; color: #cb4335; }
+
+  /* ── CANONICAL QUERY BOX ────────────────────────────────── */
+  .demo-box {
+    background: linear-gradient(135deg, #eaf4fb, #f5eef8);
+    border: 2px solid #7d3c98;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 28px;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .demo-box h3 {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #7d3c98;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .demo-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .demo-step {
+    background: white;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    flex: 1;
+    min-width: 160px;
+    border-left: 3px solid #7d3c98;
+    line-height: 1.5;
+  }
+  .demo-step b { color: #7d3c98; }
+
+  @media (max-width: 768px) {
+    .row { flex-direction: column; }
+    body { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ════════════════════════════════════════════════════ -->
+<div class="header">
+  <h1>⬡ ORACLE</h1>
+  <p>Orchestrated Retrieval and Conversational Logic Engine — Internal Architecture</p>
+</div>
+
+<!-- ═══ LEGEND ════════════════════════════════════════════════════ -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#2e86c1"></div> UI Layer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7d3c98"></div> Conductor Agent</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#cb4335"></div> Guardrails / Security</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#148f77"></div> Specialist Agents</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d4ac0d"></div> Function Tools</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2471a3"></div> Data Stores</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ca6f1e"></div> HITL / Human Review</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1e8449"></div> Session Memory</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4a4a9e"></div> Phase 2 — MCP</div>
+</div>
+
+<!-- ═══ DIAGRAM ═══════════════════════════════════════════════════ -->
+<div class="diagram">
+
+  <!-- ── LAYER 1: USER + STREAMLIT UI ────────────────────────── -->
+  <div class="section c-ui" style="border:2px solid #2e86c1;">
+    <div class="section-title" style="color:#2e86c1;">① User Interface Layer — Streamlit</div>
+    <div class="row">
+      <div class="block c-ui" style="border:1px solid #2e86c1;">
+        <div class="block-title">User Input</div>
+        <div class="block-name">NLP Chat Query</div>
+        <div class="block-sub">st.chat_input — natural language question</div>
+      </div>
+      <div class="block c-ui" style="border:1px solid #2e86c1;">
+        <div class="block-title">Conversation Panel</div>
+        <div class="block-name">st.chat_message</div>
+        <div class="block-sub">Displays history, sources used, groundedness score</div>
+      </div>
+      <div class="block c-hitl" style="border:1px solid #ca6f1e;">
+        <div class="block-title">HITL Panel (conditional)</div>
+        <div class="block-name">Human Review</div>
+        <div class="block-sub">Appears when groundedness &lt; 0.70 or PII flag</div>
+        <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+          <span style="background:#fad7a0;color:#7d6608;font-size:0.6rem;padding:2px 7px;border-radius:10px;font-weight:700;">✅ Approve</span>
+          <span style="background:#fad7a0;color:#7d6608;font-size:0.6rem;padding:2px 7px;border-radius:10px;font-weight:700;">✏️ Edit</span>
+          <span style="background:#fad7a0;color:#7d6608;font-size:0.6rem;padding:2px 7px;border-radius:10px;font-weight:700;">🔄 Regenerate</span>
+        </div>
+      </div>
+      <div class="block c-mem" style="border:1px solid #1e8449;">
+        <div class="block-title">Session State</div>
+        <div class="block-name">st.session_state</div>
+        <div class="block-sub">oracle_ctx · chat_history · hitl_pending · sources_used · groundedness_report</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- arrow down -->
+  <div class="arrow-row">
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="arrow-line"></div>
+    </div>
+    <div class="arrow-label">oracle_engine.py → Runner.run(conductor, input, context, run_config)</div>
+  </div>
+
+  <!-- ── LAYER 2: SENTINEL INPUT GUARDRAIL ──────────────────── -->
+  <div class="s-guardrail">
+    <div class="section-title" style="color:#cb4335;">② Input Security Gate — SENTINEL (runs in parallel with Conductor startup)</div>
+    <div class="row">
+      <div class="block c-guard" style="border:1px solid #cb4335; flex:2;">
+        <div class="block-title">Agent 5 — SENTINEL Input Guardrail</div>
+        <div class="block-name">🛡 SENTINEL</div>
+        <div class="block-sub">@input_guardrail · run_in_parallel=True · Model: gpt-4o-mini</div>
+        <div class="block-sub" style="margin-top:6px;">Detects: prompt injection · off-topic queries · PII extraction attempts</div>
+        <div class="tripwire">⚡ Tripwire → InputGuardrailTripwireTriggered → Friendly rejection</div>
+        <span class="badge b-gpt4om">gpt-4o-mini</span>
+        <span class="badge b-sdk">@input_guardrail</span>
+      </div>
+      <div class="block c-guard" style="border:1px solid #27ae60; background:#eafaf1; flex:1;">
+        <div class="block-title">Output</div>
+        <div class="block-name" style="color:#1e8449;">SecurityCheck</div>
+        <div class="block-sub">is_safe: bool<br/>violation_type: Optional[str]<br/>severity: low/medium/high</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- arrow -->
+  <div class="arrow-row">
+    <div style="display:flex;flex-direction:column;align-items:center;"><div class="arrow-line"></div></div>
+    <div class="arrow-label">Safe → proceed to Conductor</div>
+  </div>
+
+  <!-- ── LAYER 3: ORACLE CONDUCTOR ──────────────────────────── -->
+  <div class="section c-cond" style="border:2px solid #7d3c98;">
+    <div class="section-title" style="color:#7d3c98;">③ Orchestration Brain — ORACLE Conductor</div>
+    <div class="block c-cond" style="border:1px solid #7d3c98;">
+      <div class="block-title">Agent 1 — The Triage &amp; Composition Brain</div>
+      <div class="block-name">🎯 ORACLE Conductor</div>
+      <div class="block-sub">Runner.run() entry point · RunContext[OracleSessionContext] · max_turns=15</div>
+      <span class="badge b-claude">Claude sonnet-4-5 PRIMARY</span>
+      <span class="badge b-gpt4o">gpt-4o FALLBACK (RunConfig)</span>
+      <span class="badge b-sdk">output_type=ConductorResponse</span>
+
+      <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+        <div style="background:#f0e6fa;border:1px solid #9b59b6;border-radius:8px;padding:10px;">
+          <div style="font-size:0.65rem;font-weight:700;color:#6c3483;margin-bottom:4px;">ROUTING RULE 1</div>
+          <div style="font-size:0.7rem;">Pure weather/news query</div>
+          <div style="font-size:0.65rem;color:#7d3c98;margin-top:3px;">→ escalate_to_herald (full handoff)</div>
+        </div>
+        <div style="background:#f0e6fa;border:1px solid #9b59b6;border-radius:8px;padding:10px;">
+          <div style="font-size:0.65rem;font-weight:700;color:#6c3483;margin-bottom:4px;">ROUTING RULE 2</div>
+          <div style="font-size:0.7rem;">Pure employee/HR query</div>
+          <div style="font-size:0.65rem;color:#7d3c98;margin-top:3px;">→ escalate_to_archivist (full handoff)</div>
+        </div>
+        <div style="background:#f0e6fa;border:1px solid #9b59b6;border-radius:8px;padding:10px;">
+          <div style="font-size:0.65rem;font-weight:700;color:#6c3483;margin-bottom:4px;">ROUTING RULE 3</div>
+          <div style="font-size:0.7rem;">Blended query (both)</div>
+          <div style="font-size:0.65rem;color:#7d3c98;margin-top:3px;">→ call BOTH as tools in same turn</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HANDOFF + AS_TOOL FORK ─────────────────────────────── -->
+  <div style="margin:4px 0; display:flex; align-items:center; gap:12px; padding:10px 0;">
+    <div style="flex:1;height:2px;background:linear-gradient(90deg,#7d3c98,#148f77);"></div>
+    <div style="font-size:0.65rem;color:#7d3c98;font-weight:700;white-space:nowrap;background:#f5eef8;padding:3px 10px;border-radius:10px;border:1px solid #9b59b6;">
+      HANDOFF (full agent turn) &nbsp;|&nbsp; as_tool() (inline tool call)
+    </div>
+    <div style="flex:1;height:2px;background:linear-gradient(90deg,#148f77,#7d3c98);"></div>
+  </div>
+
+  <!-- ── LAYER 4: SPECIALIST AGENTS ─────────────────────────── -->
+  <div class="s-agents">
+    <div class="section-title" style="color:#148f77;">④ Specialist Agents — HERALD &amp; ARCHIVIST</div>
+    <div class="row">
+
+      <!-- HERALD -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="block c-agent" style="border:1px solid #148f77;">
+          <div class="block-title">Agent 2 — Live News &amp; Weather Specialist</div>
+          <div class="block-name">📡 HERALD</div>
+          <div class="block-sub">Model: claude-sonnet-4-5 · output_type=WeatherNewsResult</div>
+          <div class="dual-mode">
+            <span class="dm-agent">Full Agent via escalate_to_herald handoff</span>
+            <span class="dm-tool">Tool: herald_agent.as_tool("fetch_live_context")</span>
+          </div>
+          <div style="font-size:0.62rem;margin-top:6px;color:#0e6655;">handoff_description set · input_filter strips employee turns · on_handoff pre-warms Tavily</div>
+          <span class="badge b-sdk">HeraldHandoffInput</span>
+        </div>
+
+        <!-- herald tools -->
+        <div class="s-tools" style="padding:10px;">
+          <div style="font-size:0.62rem;font-weight:700;color:#b7950b;margin-bottom:8px;letter-spacing:1px;">HERALD TOOLS</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div class="block c-tool" style="border:1px solid #d4ac0d;padding:8px 12px;">
+              <div class="block-name" style="font-size:0.78rem;">tavily_weather_fetch</div>
+              <div class="block-sub">(ctx, location) → WeatherResult</div>
+            </div>
+            <div class="block c-tool" style="border:1px solid #d4ac0d;padding:8px 12px;">
+              <div class="block-name" style="font-size:0.78rem;">tavily_news_search</div>
+              <div class="block-sub">(ctx, query, max_results) → list[NewsItem]</div>
+            </div>
+            <div class="block c-tool" style="border:1px solid #d4ac0d;padding:8px 12px;">
+              <div class="block-name" style="font-size:0.78rem;">embed_and_store_live_context</div>
+              <div class="block-sub">(ctx, text, metadata) → doc_id str</div>
+            </div>
+            <div class="block c-tool" style="border:1px solid #d4ac0d;padding:8px 12px;">
+              <div class="block-name" style="font-size:0.78rem;">chroma_similarity_search</div>
+              <div class="block-sub">(ctx, query, collection, n) → list[dict]</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- centre divider -->
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:60px;min-width:80px;">
+        <div style="font-size:0.6rem;font-weight:700;color:#7d3c98;background:#f5eef8;border:1px solid #9b59b6;border-radius:8px;padding:6px 10px;text-align:center;white-space:nowrap;">
+          Semantic<br/>Location<br/>Bridge<br/>─────<br/>Chroma<br/>cosine<br/>match<br/>&lt; 0.30
+        </div>
+        <div style="width:2px;flex:1;background:#9b59b6;margin-top:8px;"></div>
+      </div>
+
+      <!-- ARCHIVIST -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="block c-agent" style="border:1px solid #148f77;">
+          <div class="block-title">Agent 3 — SQL &amp; Employee Knowledge Specialist</div>
+          <div class="block-name">📚 ARCHIVIST</div>
+          <div class="block-sub">Model: claude-sonnet-4-5 · output_type=EmployeeQueryResult</div>
+          <div class="dual-mode">
+            <span class="dm-agent">Full Agent via escalate_to_archivist handoff</span>
+            <span class="dm-tool">Tool: archivist_agent.as_tool("lookup_employee_data")</span>
+          </div>
+          <div style="font-size:0.62rem;margin-top:6px;color:#0e6655;">on_handoff pre-loads schema · input_filter strips weather turns · ArchivistHandoffInput</div>
+          <span class="badge b-sdk">ArchivistHandoffInput</span>
+        </div>
+
+        <!-- archivist tools -->
+        <div class="s-tools" style="padding:10px;">
+          <div style="font-size:0.62rem;font-weight:700;color:#b7950b;margin-bottom:8px;letter-spacing:1px;">ARCHIVIST TOOLS</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div class="block c-tool" style="border:1px solid #d4ac0d;padding:8px 12px;">
+              <div class="block-name" style="font-size:0.78rem;">sql_query_employee</div>
+              <div class="block-sub">(ctx, name, dept, location, emp_id) → EmployeeQueryResult</div>
+            </div>
+            <div class="block c-tool" style="border:1px solid #d4ac0d;padding:8px 12px;">
+              <div class="block-name" style="font-size:0.78rem;">semantic_location_mapper</div>
+              <div class="block-sub">(ctx, weather_location_str) → list[EmployeeRecord]</div>
+            </div>
+            <div class="block c-tool" style="border:1px solid #d4ac0d;padding:8px 12px;">
+              <div class="block-name" style="font-size:0.78rem;">chroma_similarity_search</div>
+              <div class="block-sub">(ctx, query, "employee_locations", n) → list[dict]</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- arrow -->
+  <div class="arrow-row">
+    <div style="display:flex;flex-direction:column;align-items:center;"><div class="arrow-line"></div></div>
+    <div class="arrow-label">Results returned to Conductor → ConductorResponse composed</div>
+  </div>
+
+  <!-- ── LAYER 5: DATA STORES ───────────────────────────────── -->
+  <div class="s-stores">
+    <div class="section-title" style="color:#2471a3;">⑤ Data Layer</div>
+    <div class="row">
+
+      <div class="block c-store" style="border:1px solid #2471a3;">
+        <div class="block-title">Tavily API (Live)</div>
+        <div class="block-name">🌐 Tavily</div>
+        <div class="block-sub">News: topic="news" · Weather: freeform search<br/>Retry 3× via tenacity · Falls back to Chroma cache</div>
+        <span class="badge b-sdk">tavily-python</span>
+      </div>
+
+      <div class="block c-store" style="border:1px solid #2471a3;">
+        <div class="block-title">ChromaDB — Collection: live_context</div>
+        <div class="block-name">🧮 Chroma Live</div>
+        <div class="block-sub">Stores Tavily weather + news embeddings<br/>ID: tavily_{sha256[:16]} · metadata: location, session_id, fetched_at</div>
+        <span class="badge b-sdk">text-embedding-3-small</span>
+      </div>
+
+      <div class="block c-store" style="border:1px solid #2471a3;">
+        <div class="block-title">ChromaDB — Collection: employee_locations</div>
+        <div class="block-name">🧮 Chroma Employees</div>
+        <div class="block-sub">500 employee location strings embedded<br/>ID: emp_{employee_id} · Semantic bridge to weather</div>
+        <span class="badge b-sdk">distance &lt; 0.30</span>
+      </div>
+
+      <div class="block c-store" style="border:1px solid #2471a3;">
+        <div class="block-title">SQLAlchemy + SQLite</div>
+        <div class="block-name">🗄 employees table</div>
+        <div class="block-sub">500 rows · EMP-0001..EMP-0500<br/>Row 42: Raghav Sharma · Austin, TX · Engineering<br/>Cols: emp_id · name · age · dept · office_location</div>
+        <span class="badge b-sdk">aiosqlite async</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- arrow -->
+  <div class="arrow-row">
+    <div style="display:flex;flex-direction:column;align-items:center;"><div class="arrow-line"></div></div>
+    <div class="arrow-label">Draft ConductorResponse → Output Guardrails</div>
+  </div>
+
+  <!-- ── LAYER 6: OUTPUT GUARDRAILS ─────────────────────────── -->
+  <div class="s-guardrail">
+    <div class="section-title" style="color:#cb4335;">⑥ Output Quality &amp; Security Gates</div>
+    <div class="row">
+
+      <!-- VALIDATOR -->
+      <div class="block c-guard" style="border:1px solid #cb4335;">
+        <div class="block-title">Agent 4 — Groundedness Critic (MANDATORY)</div>
+        <div class="block-name">🔬 VALIDATOR</div>
+        <div class="block-sub">@output_guardrail · Model: gpt-4o (different from primary — no confirmation bias)</div>
+        <div class="block-sub" style="margin-top:6px;">Extracts all factual claims → checks each against retrieved Source chunks → per-claim is_grounded bool</div>
+        <div class="threshold-row">
+          <span class="thr thr-green">≥ 0.85 → PASS</span>
+          <span class="thr thr-yellow">0.70–0.85 → WARN</span>
+          <span class="thr thr-red">&lt; 0.70 → FAIL</span>
+        </div>
+        <div class="tripwire">⚡ score &lt; 0.70 → GuardrailFunctionOutput(tripwire_triggered=True) → HITL activation</div>
+        <div style="margin-top:6px;font-size:0.62rem;color:#7b241c;">Also exportable: validator_agent.as_tool("validate_groundedness")</div>
+        <span class="badge b-gpt4o">gpt-4o</span>
+        <span class="badge b-sdk">GroundednessReport</span>
+      </div>
+
+      <!-- SENTINEL OUTPUT -->
+      <div class="block c-guard" style="border:1px solid #cb4335;">
+        <div class="block-title">Agent 5 — SENTINEL Output Guardrail</div>
+        <div class="block-name">🛡 SENTINEL (Output)</div>
+        <div class="block-sub">@output_guardrail · Model: gpt-4o-mini</div>
+        <div class="block-sub" style="margin-top:6px;">Detects: PII leakage in response · sensitive employee data exposure · data exfiltration patterns</div>
+        <div class="tripwire">⚡ Tripwire → OutputGuardrailTripwireTriggered → HITL panel activated</div>
+        <span class="badge b-gpt4om">gpt-4o-mini</span>
+        <span class="badge b-sdk">SecurityCheck</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- arrow / HITL branch -->
+  <div style="display:flex;gap:16px;padding:8px 0;align-items:flex-start;">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+      <div style="font-size:0.65rem;color:#1e8449;font-weight:700;margin-bottom:4px;">✅ Guardrails PASS</div>
+      <div class="arrow-line" style="height:28px;"></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+      <div style="font-size:0.65rem;color:#cb4335;font-weight:700;margin-bottom:4px;">⚡ Tripwire FIRED</div>
+      <div style="height:28px;width:2px;background:#cb4335;position:relative;">
+        <div style="position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid #cb4335;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LAYER 7: HITL + SESSION MEMORY (side by side) ────────── -->
+  <div class="row" style="gap:16px;align-items:stretch;">
+    <div class="block c-hitl" style="border:1px solid #ca6f1e; flex:2;">
+      <div class="block-title">⑦ Human-in-the-Loop (HITL) State Machine</div>
+      <div class="block-name">👁 Human Review Panel</div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+        <div style="background:white;border-radius:6px;padding:8px;font-size:0.68rem;border-left:3px solid #ca6f1e;">
+          <b>TRIGGER:</b> OutputGuardrailTripwireTriggered caught in oracle_engine.py<br/>
+          ctx.hitl_pending = True · ctx.hitl_draft_answer = draft · state serialized to SQLite session_memory
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="background:#fef5e7;border:1px solid #ca6f1e;border-radius:6px;padding:6px 10px;font-size:0.65rem;flex:1;text-align:center;">
+            <b>✅ Approve</b><br/>Publish draft as-is
+          </div>
+          <div style="background:#fef5e7;border:1px solid #ca6f1e;border-radius:6px;padding:6px 10px;font-size:0.65rem;flex:1;text-align:center;">
+            <b>✏️ Edit &amp; Approve</b><br/>Log as human-corrected
+          </div>
+          <div style="background:#fef5e7;border:1px solid #ca6f1e;border-radius:6px;padding:6px 10px;font-size:0.65rem;flex:1;text-align:center;">
+            <b>🔄 Regenerate</b><br/>Runner.run() with rejection context
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block c-mem" style="border:1px solid #1e8449; flex:1;">
+      <div class="block-title">⑧ Persistent Session Memory</div>
+      <div class="block-name">💾 OracleSessionContext</div>
+      <div style="margin-top:8px;font-size:0.68rem;line-height:1.6;">
+        <b>In-session:</b> RunContextWrapper[T] — live context across all turns<br/>
+        <b>Cross-turn:</b> st.session_state["oracle_ctx"]<br/>
+        <b>Phase 1:</b> SQLite session_memory table · model_dump_json()<br/>
+        <b>Phase 2:</b> Redis · openai-agents[redis] · TTL=24h<br/>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge b-sdk" style="font-size:0.55rem;">session_id</span>
+        <span class="badge b-sdk" style="font-size:0.55rem;">conversation_history</span>
+        <span class="badge b-sdk" style="font-size:0.55rem;">last_employee_lookup</span>
+        <span class="badge b-sdk" style="font-size:0.55rem;">last_weather_lookup</span>
+        <span class="badge b-sdk" style="font-size:0.55rem;">turn_count</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- arrow -->
+  <div class="arrow-row">
+    <div style="display:flex;flex-direction:column;align-items:center;"><div class="arrow-line"></div></div>
+    <div class="arrow-label">Final verified answer → Streamlit UI</div>
+  </div>
+
+  <!-- ── LAYER 8: FINAL OUTPUT ──────────────────────────────── -->
+  <div class="block" style="background:linear-gradient(135deg,#e8f8f5,#f5eef8);border:2px solid #7d3c98;text-align:center;padding:16px;">
+    <div class="block-title" style="color:#7d3c98;">⑨ Final Response</div>
+    <div class="block-name" style="color:#4a235a;">ConductorResponse — Grounded · Verified · Cited</div>
+    <div style="font-size:0.72rem;margin-top:6px;color:#5d6d7e;">answer · sources[Source] · confidence · query_type · follow_up_suggestions</div>
+  </div>
+
+  <!-- ── PHASE 2: MCP EXTENSION ─────────────────────────────── -->
+  <div class="s-phase2" style="margin-top:24px;">
+    <div class="section-title" style="color:#4a4a9e;">⑩ Phase 2 — MCP Server Extension (Zero Rewiring)</div>
+    <div class="row">
+      <div class="block c-mcp" style="border:1px solid #4a4a9e;">
+        <div class="block-title">oracle_mcp_server.py</div>
+        <div class="block-name">⚙ MCP Server</div>
+        <div class="block-sub">Wraps existing function_tools as MCP resources. Same typed signatures — no duplication.</div>
+        <span class="badge b-phase2">MCPServerStdio</span>
+      </div>
+      <div class="block c-mcp" style="border:1px solid #4a4a9e;">
+        <div class="block-title">Endpoints</div>
+        <div class="block-name">MCP Tools</div>
+        <div class="block-sub">oracle/search_employees → sql_query_employee<br/>oracle/get_weather → tavily_weather_fetch<br/>oracle/blended_query → full Conductor pipeline<br/>oracle/session/{id} → OracleSessionContext JSON</div>
+      </div>
+      <div class="block c-mcp" style="border:1px solid #4a4a9e;">
+        <div class="block-title">Toggle</div>
+        <div class="block-name">MCP_ENABLED flag</div>
+        <div class="block-sub">Set in settings.py via .env. HERALD v2 + ARCHIVIST v2 add MCPServerStdio to tools=[] — no other agent changes needed.</div>
+        <span class="badge b-phase2">Phase 2 drop-in</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ CANONICAL DEMO QUERY ══════════════════════════════════════ -->
+<div class="demo-box">
+  <h3>🧪 Canonical Acceptance Test — "What is the weather like where Raghav works?"</h3>
+  <div class="demo-steps">
+    <div class="demo-step"><b>① SENTINEL</b><br/>Input guardrail (parallel)<br/>→ is_safe: True</div>
+    <div class="demo-step"><b>② Conductor</b><br/>Intent: blended<br/>→ call BOTH as tools</div>
+    <div class="demo-step"><b>③ archivist_as_tool</b><br/>SQL: Raghav Sharma<br/>EMP-0042 · Austin, TX · Engineering</div>
+    <div class="demo-step"><b>④ herald_as_tool</b><br/>Tavily: weather Austin TX<br/>Stored in Chroma live_context</div>
+    <div class="demo-step"><b>⑤ Chroma bridge</b><br/>employee_locations match<br/>EMP-0042 ↔ "Austin, TX" · dist &lt; 0.30</div>
+    <div class="demo-step"><b>⑥ VALIDATOR</b><br/>score: 0.97 · verdict: pass<br/>All claims traceable</div>
+    <div class="demo-step"><b>⑦ SENTINEL output</b><br/>is_safe: True<br/>No PII leak detected</div>
+    <div class="demo-step"><b>⑧ Final answer</b><br/>"Raghav Sharma works in Austin, TX (Engineering). Current: 94°F, Partly Cloudy."<br/>Sources: [SQL: EMP-0042] [Tavily: Austin weather]</div>
+  </div>
+</div>
+
+<!-- ─── SDK CHECKLIST ─────────────────────────────────────────── -->
+<div style="max-width:1280px;margin:24px auto 0;background:white;border-radius:14px;padding:20px;border:1px solid #ddd;">
+  <div style="font-size:0.7rem;font-weight:800;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:14px;">OpenAI Agents SDK — Complete Component Usage</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ Agent (×5)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ Runner.run()</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ RunConfig (fallback + tracing)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ RunContextWrapper[T]</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ function_tool (×10)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ handoff() function</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ handoff(input_type=)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ handoff(on_handoff=)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ handoff(input_filter=)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ agent.as_tool() — HERALD + ARCHIVIST</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ @input_guardrail</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ @output_guardrail</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ GuardrailFunctionOutput(tripwire_triggered)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ InputGuardrailTripwireTriggered</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ OutputGuardrailTripwireTriggered</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ output_type= (Pydantic, all agents)</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ AgentHooks</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ RunHooks</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ MaxTurnsExceeded</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ handoff_description</span>
+    <span style="background:#d5f5e3;color:#1e8449;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">✓ Built-in tracing</span>
+    <span style="background:#d7d7f5;color:#2c2c7e;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">Phase 2: openai-agents[redis]</span>
+    <span style="background:#d7d7f5;color:#2c2c7e;font-size:0.62rem;padding:3px 10px;border-radius:12px;font-weight:700;">Phase 2: MCPServerStdio</span>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:20px;font-size:0.65rem;color:#aaa;letter-spacing:1px;">
+  ORACLE — Orchestrated Retrieval and Conversational Logic Engine · Architecture v1.0
+</div>
+
+</body>
+</html>

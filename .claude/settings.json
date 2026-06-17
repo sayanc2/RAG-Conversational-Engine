@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json,sys,datetime; data=json.load(sys.stdin); entry={'event':'PreToolUse','tool':data.get('tool_name',''),'input_preview':str(data.get('tool_input',''))[:200],'ts':datetime.datetime.utcnow().isoformat()}; f=open('oracle/logs/claude_hooks.jsonl','a'); f.write(json.dumps(entry)+'\\n'); f.close()\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json,sys,datetime; data=json.load(sys.stdin); entry={'event':'PostToolUse','tool':data.get('tool_name',''),'exit_code':data.get('exit_code',0),'output_preview':str(data.get('tool_response',''))[:200],'ts':datetime.datetime.utcnow().isoformat()}; f=open('oracle/logs/claude_hooks.jsonl','a'); f.write(json.dumps(entry)+'\\n'); f.close()\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
