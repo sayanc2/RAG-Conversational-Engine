@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORACLE Agent Architecture Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #f8fafc;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+        }
+
+        .diagram-container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow-x: auto;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .agent { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .tool { background: #10b981; }
+        .guardrail { background: #ef4444; }
+        .data-store { background: #f59e0b; }
+        .external { background: #3b82f6; }
+        .ui { background: #8b5cf6; }
+
+        .diagram-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .diagram-section h2 {
+            color: #0f0c29;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .section-content {
+            background: #f8fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            color: #1e1b4b;
+            line-height: 1.6;
+        }
+
+        .section-content h3 {
+            color: #667eea;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .section-content ul {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .section-content li {
+            margin-bottom: 5px;
+        }
+
+        .code-block {
+            background: #1e1b4b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .flow-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .flow-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 20px;
+            color: #1e1b4b;
+        }
+
+        .flow-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .flow-card p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 5px;
+            margin-top: 5px;
+        }
+
+        .badge.tool { background: #10b981; }
+        .badge.guardrail { background: #ef4444; }
+        .badge.data { background: #f59e0b; }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            text-align: left;
+            color: #1e1b4b;
+        }
+
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f1f5f9;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .flow-diagram {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔮 ORACLE Agent Architecture</h1>
+            <p>Multi-Agent RAG System with OpenAI Agents SDK</p>
+        </div>
+
+        <!-- Main Architecture Diagram -->
+        <div class="diagram-container">
+            <h2 style="color: #0f0c29; text-align: center; margin-bottom: 20px;">Complete System Architecture</h2>
+            <div class="mermaid">
+                graph TB
+                    subgraph Users["🖥️ Users"]
+                        UI["Streamlit Frontend<br/>http://localhost:8501"]
+                    end
+
+                    subgraph Input["🔐 Input Layer"]
+                        SENTINEL_IN["SENTINEL<br/>Input Guardrail<br/>(GPT-4o-mini)<br/>- Prompt Injection<br/>- PII Extraction"]
+                    end
+
+                    subgraph Orchestration["🎭 Orchestration Layer"]
+                        CONDUCTOR["ORACLE Conductor<br/>(Claude Sonnet 4.5)<br/>- Intent Detection<br/>- Tool Routing<br/>- Answer Composition"]
+                    end
+
+                    subgraph Specialists["🤖 Specialist Agents"]
+                        HERALD["HERALD<br/>(Live Data)<br/>🌤️ Weather & News"]
+                        ARCHIVIST["ARCHIVIST<br/>(Database)<br/>👤 Employees"]
+                        VALIDATOR["VALIDATOR<br/>(Critic)<br/>✅ Groundedness"]
+                    end
+
+                    subgraph Tools["🔧 Function Tools"]
+                        T1["tavily_weather_fetch<br/>tavily_news_search"]
+                        T2["sql_query_employee<br/>semantic_location_mapper"]
+                        T3["embed_and_store<br/>chroma_similarity_search"]
+                        T4["classify_input_safety<br/>classify_output_safety"]
+                        T5["extract_and_verify_claims"]
+                    end
+
+                    subgraph Data["💾 Data Layer"]
+                        SQL["SQLite + aiosqlite<br/>500 Employees<br/>EMP-0001 to EMP-0500<br/>Raghav @ EMP-0042"]
+                        CHROMA["ChromaDB<br/>- live_context<br/>- employee_locations"]
+                    end
+
+                    subgraph External["🌐 External APIs"]
+                        TAVILY["Tavily API<br/>Real-time Weather<br/>& News"]
+                        OPENAI["OpenAI API<br/>Embeddings<br/>& GPT-4o"]
+                    end
+
+                    subgraph Output["🛡️ Output Layer"]
+                        SENTINEL_OUT["SENTINEL Output<br/>Guardrail<br/>- PII Leak Detection"]
+                        VALIDATOR_OUT["VALIDATOR<br/>Groundedness Check<br/>Score < 0.70 → HITL"]
+                    end
+
+                    subgraph Response["💬 Response"]
+                        HITL["HITL Panel<br/>- Draft Review<br/>- Edit & Approve<br/>- Regenerate"]
+                        ANSWER["Final Answer +<br/>Sources & Confidence"]
+                    end
+
+                    UI -->|User Query| SENTINEL_IN
+                    SENTINEL_IN -->|Pass| CONDUCTOR
+                    SENTINEL_IN -->|Block| ANSWER
+
+                    CONDUCTOR -->|Weather Only| HERALD
+                    CONDUCTOR -->|Employee Only| ARCHIVIST
+                    CONDUCTOR -->|Blended| T1 & T2
+                    CONDUCTOR -->|Call Tools| T3 & T4 & T5
+
+                    HERALD --> T1
+                    ARCHIVIST --> T2
+                    T1 --> TAVILY
+                    T1 --> T3
+                    T2 --> SQL
+                    T2 --> T3
+                    T3 --> CHROMA
+                    T4 --> OPENAI
+                    T5 --> OPENAI
+
+                    TAVILY -->|Live Data| CHROMA
+                    SQL -->|Employee Data| CHROMA
+                    OPENAI -->|Embeddings| CHROMA
+
+                    CONDUCTOR -->|Composition| SENTINEL_OUT
+                    SENTINEL_OUT -->|Safe| VALIDATOR_OUT
+                    SENTINEL_OUT -->|PII Leak| HITL
+
+                    VALIDATOR_OUT -->|Pass/Warn| ANSWER
+                    VALIDATOR_OUT -->|Fail| HITL
+
+                    HITL -->|Approve| ANSWER
+                    ANSWER -->|Chat Message| UI
+
+                    style UI fill:#8b5cf6,stroke:#6d28d9,color:#fff
+                    style CONDUCTOR fill:#667eea,stroke:#764ba2,color:#fff
+                    style HERALD fill:#667eea,stroke:#764ba2,color:#fff
+                    style ARCHIVIST fill:#667eea,stroke:#764ba2,color:#fff
+                    style VALIDATOR fill:#667eea,stroke:#764ba2,color:#fff
+                    style SENTINEL_IN fill:#ef4444,stroke:#dc2626,color:#fff
+                    style SENTINEL_OUT fill:#ef4444,stroke:#dc2626,color:#fff
+                    style SQL fill:#f59e0b,stroke:#d97706,color:#1f2937
+                    style CHROMA fill:#f59e0b,stroke:#d97706,color:#1f2937
+                    style TAVILY fill:#3b82f6,stroke:#1e40af,color:#fff
+                    style OPENAI fill:#3b82f6,stroke:#1e40af,color:#fff
+                    style HITL fill:#ec4899,stroke:#be185d,color:#fff
+                    style ANSWER fill:#10b981,stroke:#047857,color:#fff
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color agent"></div>
+                    <span><strong>Agent</strong> - Decision-making units</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color tool"></div>
+                    <span><strong>Tool</strong> - Function execution</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color guardrail"></div>
+                    <span><strong>Guardrail</strong> - Security/validation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color data-store"></div>
+                    <span><strong>Data Store</strong> - Persistence</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color external"></div>
+                    <span><strong>External API</strong> - Third-party service</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color ui"></div>
+                    <span><strong>UI Layer</strong> - User interface</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Details -->
+        <div class="diagram-section">
+            <h2>🤖 The 5-Agent Ensemble</h2>
+            <div class="flow-diagram">
+                <div class="flow-card">
+                    <h4>🎭 ORACLE Conductor</h4>
+                    <p><strong>Model:</strong> Claude Sonnet 4.5</p>
+                    <p><strong>Role:</strong> Main orchestrator that receives all queries, detects intent, routes to specialists or calls tools, and composes final answers.</p>
+                    <span class="badge">Handoff: HERALD, ARCHIVIST</span>
+                    <span class="badge tool">Tools: herald_as_tool, archivist_as_tool</span>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🌤️ HERALD</h4>
+                    <p><strong>Model:</strong> Claude Sonnet 4.5</p>
+                    <p><strong>Role:</strong> Fetches live weather and news via Tavily API, embeds into ChromaDB.</p>
+                    <span class="badge tool">tavily_weather_fetch</span>
+                    <span class="badge tool">tavily_news_search</span>
+                    <span class="badge tool">embed_and_store_live_context</span>
+                </div>
+
+                <div class="flow-card">
+                    <h4>👤 ARCHIVIST</h4>
+                    <p><strong>Model:</strong> Claude Sonnet 4.5</p>
+                    <p><strong>Role:</strong> Queries SQLite employee database and performs semantic location mapping via Chroma.</p>
+                    <span class="badge tool">sql_query_employee</span>
+                    <span class="badge tool">semantic_location_mapper</span>
+                </div>
+
+                <div class="flow-card">
+                    <h4>✅ VALIDATOR</h4>
+                    <p><strong>Model:</strong> GPT-4o (independent perspective)</p>
+                    <p><strong>Role:</strong> Post-generation groundedness critic. Verifies every claim against sources.</p>
+                    <span class="badge guardrail">Score calculation: grounded_claims / total_claims</span>
+                    <span class="badge guardrail">Threshold: &lt;0.70 = HITL</span>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🛡️ SENTINEL</h4>
+                    <p><strong>Model:</strong> GPT-4o-mini (fast & cheap)</p>
+                    <p><strong>Role:</strong> Dual-mode security. INPUT: Detects injection/PII. OUTPUT: Detects leaks.</p>
+                    <span class="badge guardrail">Runs in parallel</span>
+                    <span class="badge guardrail">Pre-generation + post-generation</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Request Flow -->
+        <div class="diagram-section">
+            <h2>⚡ Canonical Request Flow</h2>
+            <div class="section-content">
+                <h3>Query: "What is the weather like where Raghav works?"</h3>
+                <ol style="margin-left: 20px;">
+                    <li><strong>SENTINEL Input Guardrail</strong> (parallel, fast) → Checks for prompt injection/PII extraction → PASS</li>
+                    <li><strong>Conductor Intent Detection</strong> → Recognizes blended query (employee + weather)</li>
+                    <li><strong>Archivist Tool Call</strong> → Runs `sql_query_employee(name="Raghav")` → Returns EMP-0042, Austin TX, Engineering</li>
+                    <li><strong>Herald Tool Call</strong> → Runs `tavily_weather_fetch("Austin, TX")` → Gets 94°F, Partly Cloudy → Embeds into live_context Chroma collection</li>
+                    <li><strong>Semantic Location Bridge</strong> → `semantic_location_mapper("Austin, TX")` checks employee_locations collection → Confirms Raghav @ Austin</li>
+                    <li><strong>Conductor Composition</strong> → Blends both results: "Raghav Sharma works in Austin, TX. Current weather: 94°F, Partly Cloudy."</li>
+                    <li><strong>SENTINEL Output Guardrail</strong> → Checks for PII leak (name+location combo) → PASS</li>
+                    <li><strong>VALIDATOR Critic</strong> → Verifies claims against sources → Score 0.97 (pass) → Proceeds</li>
+                    <li><strong>Final Response</strong> → Answer + sources ([SQL: EMP-0042], [Tavily: Austin weather]) delivered to UI with 97% confidence badge</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Agent Handoff vs Tool -->
+        <div class="diagram-section">
+            <h2>🔀 Handoff vs Tool Pattern</h2>
+            <div class="section-content">
+                <h3>When does each agent act as FULL AGENT (Handoff) vs TOOL (Tool Call)?</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Agent</th>
+                        <th>As Full Agent (Handoff)</th>
+                        <th>As Tool (Tool Call)</th>
+                    </tr>
+                    <tr>
+                        <td><strong>HERALD</strong></td>
+                        <td>Pure weather/news query: "What's the weather in Austin?"</td>
+                        <td>Blended query: Called by Conductor alongside archivist_as_tool</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ARCHIVIST</strong></td>
+                        <td>Pure employee query: "Find all engineers in Austin"</td>
+                        <td>Blended query: Called by Conductor alongside herald_as_tool</td>
+                    </tr>
+                    <tr>
+                        <td><strong>VALIDATOR</strong></td>
+                        <td>Not typically used as full agent</td>
+                        <td>As output_guardrail + optional on-demand re-validation tool</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SENTINEL</strong></td>
+                        <td>Not used as full agent</td>
+                        <td>As input_guardrail + output_guardrail (always attached)</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Data Flow -->
+        <div class="diagram-section">
+            <h2>🔄 Data Flow & Persistence</h2>
+            <div class="flow-diagram">
+                <div class="flow-card">
+                    <h4>💾 SQLite Database</h4>
+                    <p><strong>Location:</strong> oracle/data/oracle.db</p>
+                    <p><strong>Schema:</strong> Employees table (500 rows)</p>
+                    <p><strong>Columns:</strong> employee_id, name, age, department, office_location</p>
+                    <p><strong>Sample:</strong> EMP-0042, Raghav Sharma, 34, Engineering, Austin TX</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🔍 ChromaDB Collections</h4>
+                    <p><strong>live_context:</strong> Ephemeral weather/news embeddings from Tavily</p>
+                    <p><strong>employee_locations:</strong> Persistent 500 employee location embeddings</p>
+                    <p><strong>Semantic Bridge:</strong> Cosine similarity &lt; 0.30 = match</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🎯 Session State (Pydantic)</h4>
+                    <p><strong>OracleSessionContext:</strong> Persists across turns</p>
+                    <p>• conversation_history (ConversationTurn[])</p>
+                    <p>• groundedness_score</p>
+                    <p>• hitl_pending / hitl_draft_answer</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>💬 Cross-turn Persistence</h4>
+                    <p><strong>Memory Backend:</strong> SQLite session_memory table</p>
+                    <p>• session_id (primary key)</p>
+                    <p>• context_json (serialized OracleSessionContext)</p>
+                    <p>• TTL: 24 hours (configurable)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Safety Architecture -->
+        <div class="diagram-section">
+            <h2>🛡️ Dual Guardrail Safety Model</h2>
+            <div class="section-content">
+                <h3>Three-Layer Defense</h3>
+
+                <h4 style="color: #667eea; margin-top: 20px;">Layer 1: Input Guardrail (SENTINEL)</h4>
+                <p>Runs in parallel with Conductor startup (low latency).</p>
+                <p><strong>Violations detected:</strong> prompt_injection, off_topic, pii_request, jailbreak, data_exfiltration</p>
+                <p><strong>Action:</strong> If severity=high → InputGuardrailTripwireTriggered → User sees friendly rejection</p>
+
+                <h4 style="color: #667eea; margin-top: 20px;">Layer 2: Output Groundedness Check (VALIDATOR)</h4>
+                <p>Post-generation critic using GPT-4o (different model = no confirmation bias).</p>
+                <p><strong>Score calculation:</strong> grounded_claims / total_claims</p>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Score Range</th>
+                        <th>Verdict</th>
+                        <th>Action</th>
+                    </tr>
+                    <tr>
+                        <td>&ge; 0.85</td>
+                        <td>PASS</td>
+                        <td>Publish directly</td>
+                    </tr>
+                    <tr>
+                        <td>0.70 - 0.85</td>
+                        <td>WARN</td>
+                        <td>Publish + log warning</td>
+                    </tr>
+                    <tr>
+                        <td>&lt; 0.70</td>
+                        <td>FAIL</td>
+                        <td>Activate HITL panel</td>
+                    </tr>
+                </table>
+
+                <h4 style="color: #667eea; margin-top: 20px;">Layer 3: Output Guardrail (SENTINEL)</h4>
+                <p>Runs on final response before user sees it.</p>
+                <p><strong>Violations:</strong> pii_leak (multiple employees' names+age+location), data_exfiltration (bulk dumps)</p>
+                <p><strong>Action:</strong> Block or log based on severity</p>
+            </div>
+        </div>
+
+        <!-- HITL System -->
+        <div class="diagram-section">
+            <h2>👥 Human-In-The-Loop (HITL)</h2>
+            <div class="section-content">
+                <h3>When HITL Triggers:</h3>
+                <ul>
+                    <li><strong>Groundedness Score &lt; 0.70</strong> (VALIDATOR fail verdict)</li>
+                    <li><strong>Sensitive PII Combination</strong> (detected by Conductor or Sentinel)</li>
+                </ul>
+
+                <h3 style="margin-top: 20px;">HITL Panel Components:</h3>
+                <div class="flow-diagram">
+                    <div class="flow-card">
+                        <h4>📊 Visual Indicators</h4>
+                        <p>• Groundedness bar (🟢 pass / 🟡 warn / 🔴 fail)</p>
+                        <p>• Percentage score (0-100%)</p>
+                        <p>• Verdict label</p>
+                    </div>
+
+                    <div class="flow-card">
+                        <h4>🔍 Ungrounded Claims</h4>
+                        <p>List of specific claims that could not be verified against sources.</p>
+                        <p>Example: "Temperature is 94°F" (not in Tavily results)</p>
+                    </div>
+
+                    <div class="flow-card">
+                        <h4>✏️ Editable Draft</h4>
+                        <p>Text area pre-filled with AI draft. Human can edit before approving.</p>
+                    </div>
+
+                    <div class="flow-card">
+                        <h4>🎯 Action Buttons</h4>
+                        <p>✅ Approve (publish as-is)</p>
+                        <p>✏️ Edit & Approve (publish edited)</p>
+                        <p>🔄 Regenerate (re-run with error feedback)</p>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 20px;">Logging & Analytics:</h3>
+                <p>• Human-corrected answers logged separately</p>
+                <p>• Regenerate count tracked</p>
+                <p>• Session saves to SQLite after HITL resolution</p>
+            </div>
+        </div>
+
+        <!-- File Structure -->
+        <div class="diagram-section">
+            <h2>📁 Project File Structure</h2>
+            <div class="section-content">
+                <div class="code-block">oracle/
+├── app.py                    # Streamlit frontend
+├── oracle_engine.py          # Runner.run() wrapper + exception handling
+├── seed_db.py                # One-time: seed 500 employees + embeddings
+├── settings.py               # Pydantic BaseSettings (env vars)
+│
+├── agents/
+│   ├── conductor.py          # Main orchestrator agent
+│   ├── herald.py             # Live weather/news specialist
+│   ├── archivist.py          # SQL employee specialist
+│   ├── validator.py          # Groundedness critic guardrail
+│   ├── sentinel.py           # Security guardrail
+│   └── hooks.py              # OracleAgentHooks, OracleRunHooks
+│
+├── tools/
+│   ├── chroma_tools.py       # Embed & similarity search
+│   ├── sql_tools.py          # Employee queries & location mapping
+│   ├── tavily_tools.py       # Weather & news fetch
+│   ├── security_tools.py     # Safety classification
+│   ├── validation_tools.py   # Groundedness verification
+│   └── embedding.py          # OpenAI embeddings wrapper
+│
+├── models/
+│   ├── context.py            # OracleSessionContext
+│   ├── responses.py          # ConductorResponse, WeatherResult, etc
+│   ├── employee.py           # EmployeeRecord, EmployeeQueryResult
+│   ├── validation.py         # GroundednessReport
+│   └── security.py           # SecurityCheck
+│
+├── db/
+│   ├── models.py             # SQLAlchemy Employee ORM
+│   ├── engine.py             # Async engine + session factory
+│   └── queries.py            # SQL builder functions
+│
+├── memory/
+│   └── session_store.py      # SQLite cross-session persistence
+│
+├── prompts/
+│   ├── conductor.md          # Conductor system prompt
+│   ├── herald.md             # Herald instructions
+│   ├── archivist.md          # Archivist instructions
+│   ├── validator.md          # Validator critic prompt
+│   └── sentinel.md           # Sentinel security prompt
+│
+├── tests/
+│   ├── test_tools.py         # Unit tests for all tools
+│   ├── test_guardrails.py    # Guardrail tripwire tests
+│   ├── test_blended_query.py # Acceptance test
+│   └── fixtures.py           # Shared test data
+│
+├── data/
+│   ├── oracle.db             # SQLite database
+│   └── chroma/               # ChromaDB persistent storage
+│
+├── logs/
+│   └── claude_hooks.jsonl    # PreToolUse/PostToolUse hooks
+│
+├── requirements.txt
+├── .env.example
+└── .env                      # API keys (not in git)</div>
+            </div>
+        </div>
+
+        <!-- Tech Stack -->
+        <div class="diagram-section">
+            <h2>⚙️ Technology Stack</h2>
+            <div class="flow-diagram">
+                <div class="flow-card">
+                    <h4>🧠 LLM Models</h4>
+                    <p><strong>Primary:</strong> Claude Sonnet 4.5</p>
+                    <p><strong>Validator:</strong> GPT-4o</p>
+                    <p><strong>Sentinel:</strong> GPT-4o-mini</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🤖 Orchestration</h4>
+                    <p><strong>OpenAI Agents SDK</strong></p>
+                    <p>• Agent + Runner</p>
+                    <p>• Handoffs + Tools</p>
+                    <p>• Input/Output Guardrails</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>💾 Persistence</h4>
+                    <p><strong>SQLite + aiosqlite</strong> (relational)</p>
+                    <p><strong>ChromaDB</strong> (vector)</p>
+                    <p><strong>Async ORM:</strong> SQLAlchemy</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🎨 Frontend</h4>
+                    <p><strong>Streamlit 1.58</strong></p>
+                    <p>Custom CSS gradient theme</p>
+                    <p>Responsive layout</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🌐 External APIs</h4>
+                    <p><strong>Tavily API</strong> (weather/news)</p>
+                    <p><strong>OpenAI API</strong> (embeddings)</p>
+                    <p><strong>Anthropic API</strong> (Claude)</p>
+                </div>
+
+                <div class="flow-card">
+                    <h4>🧪 Quality</h4>
+                    <p><strong>pytest</strong> (testing)</p>
+                    <p><strong>18/18 tests passing</strong></p>
+                    <p>Unit + integration + E2E</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Integration Points -->
+        <div class="diagram-section">
+            <h2>🔗 Integration & Deployment</h2>
+            <div class="section-content">
+                <h3>API Key Requirements:</h3>
+                <div class="code-block">ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+TAVILY_API_KEY=tvly-...</div>
+
+                <h3 style="margin-top: 20px;">One-Time Setup:</h3>
+                <div class="code-block">PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python python -m oracle.seed_db</div>
+
+                <h3 style="margin-top: 20px;">Launch Command:</h3>
+                <div class="code-block">PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python python -m streamlit run oracle/app.py</div>
+
+                <h3 style="margin-top: 20px;">Access:</h3>
+                <p><strong>Local:</strong> http://localhost:8501</p>
+                <p><strong>Remote:</strong> http://&lt;server-ip&gt;:8501 (with --server.address configuration)</p>
+
+                <h3 style="margin-top: 20px;">Phase 2 Extension (MCP):</h3>
+                <p>All tools wrapped as MCP resources → available to any LLM client via MCP protocol</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>ORACLE Architecture Diagram • 5 Agents • 6 Tools • 2 Guardrails • 18/18 Tests Passing</p>
+            <p>Generated with mermaid.js | Built with Python • OpenAI Agents SDK • Streamlit</p>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+        mermaid.contentLoaded();
+    </script>
+</body>
+</html>
