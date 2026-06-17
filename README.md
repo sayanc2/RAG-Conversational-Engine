@@ -1010,6 +1010,6 @@ For issues, questions, or contributions:
 **ORACLE v1.0 | Phase 1 Complete | Production Ready**
 
 [ORACLE - Block diagram](documents/ORACLE_block_diagram.html)
-[ORACLE - Evaluation rubric](documents/ORACLE_evaluation_rubric)
+[ORACLE - Evaluation rubric](documents/ORACLE_evaluation_rubric.html)
 
 *Last updated: 2026-06-16*
